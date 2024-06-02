@@ -1,87 +1,50 @@
-import numpy as np
-from ultralytics import YOLO
 import cv2
-import matplotlib.pyplot as plt
+import numpy as np
+from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
-from consts import VEHICLE_CLASS_IDS
-from utils import read_license_plates
+from services.plate_recognizer import PlateRecognizer
 
-# Load the COCO model for vehicle detection
-coco_model = YOLO('models/yolov8n.pt')
-carplate_model = YOLO('models/carplate_detection.pt')
+app = FastAPI()
 
+origins = [
+    "*"
+]
 
-def detect_vehicles(image: np.ndarray) -> list[list[tuple]]:
-    """
-    Detects vehicles in an image using YOLO model.
-    """
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-    # Detect vehicles
-    detections = coco_model(image)[0]
-    results = []
-    for detection in detections.boxes.data.tolist():
-        x1, y1, x2, y2, score, class_id = detection
-        if int(class_id) in VEHICLE_CLASS_IDS:
-            results.append([x1, y1, x2, y2, score])
-
-    return results
-
-
-def detect_license_plates(image: np.ndarray, vehicle_detections: list[list[tuple]]) -> list[list[tuple]]:
-    """
-    Detects license plates within vehicle bounding boxes.
-    """
-    license_plate_detections = []
-
-    for vehicle in vehicle_detections:
-        x1, y1, x2, y2, _ = vehicle
-        vehicle_crop = image[int(y1):int(y2), int(x1):int(x2)]
-
-        # Detect license plates in the vehicle crop
-        plates = carplate_model(vehicle_crop)[0]
-        for plate in plates.boxes.data.tolist():
-            px1, py1, px2, py2, plate_score, plate_class_id = plate
-            # Adjust coordinates to the original image
-            plate_x1 = x1 + px1
-            plate_y1 = y1 + py1
-            plate_x2 = x1 + px2
-            plate_y2 = y1 + py2
-            license_plate_detections.append([plate_x1, plate_y1, plate_x2, plate_y2, plate_score])
-
-    return license_plate_detections
+@app.get("/health")
+def health():
+    return 'The server is health!'
 
 
-def draw_detections(image: np.ndarray, vehicle_detections: list[list[tuple]], license_plate_detections: list[list[tuple]]):
-    """
-    Draws bounding boxes for detected vehicles and license plates on the image.
-    """
-    for vehicle in vehicle_detections:
-        x1, y1, x2, y2, score = vehicle
-        cv2.rectangle(image, (int(x1), int(y1)), (int(x2), int(y2)), (255, 0, 0), 2)
-        cv2.putText(image, f"Vehicle {score:.2f}", (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 0, 0), 2)
+@app.post("/car-info")
+async def upload_image(file: UploadFile = File(...)):
+    try:
+        contents = await file.read()
 
-    for plate in license_plate_detections:
-        x1, y1, x2, y2, score = plate
-        cv2.rectangle(image, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
-        cv2.putText(image, f"Plate {score:.2f}", (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+        np_array = np.frombuffer(contents, np.uint8)
 
-    # Display the image
-    plt.figure(figsize=(12, 8))
-    plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-    plt.axis('off')
-    plt.show()
+        image = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
 
+        if image is None:
+            raise ValueError("Failed to load image")
 
-def main():
-    image_path = 'image2.jpeg'
-    image = cv2.imread(image_path)
-    vehicle_detections = detect_vehicles(image)
-    license_plate_detections = detect_license_plates(image, vehicle_detections)
+        car_info = PlateRecognizer().get_car_info(image)
 
-    texts = read_license_plates(image, license_plate_detections)
-    # draw_detections(image, vehicle_detections, license_plate_detections)
-    print(texts)
+        return car_info
+
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":
-    main()
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8001)
