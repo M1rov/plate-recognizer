@@ -8,6 +8,7 @@ from services.plate_recognizer import PlateRecognizer
 app = FastAPI()
 
 origins = [
+    "http://localhost:8081",
     "*"
 ]
 
@@ -18,6 +19,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 @app.get("/health")
 def health():
@@ -47,4 +49,5 @@ async def upload_image(file: UploadFile = File(...)):
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8001)
