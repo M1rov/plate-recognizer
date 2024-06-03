@@ -77,27 +77,21 @@ class ImageProcessing:
         return ImageProcessing.rotate_image(src_img, ImageProcessing.compute_skew(src_img))
 
     @staticmethod
-    def read_license_plates(image: np.ndarray, license_plate_detections: list[list[tuple]]):
-        license_plate_texts = []
-        for licence_plate in license_plate_detections:
-            x1, y1, x2, y2, score = licence_plate
-            license_plate_crop = image[int(y1):int(y2), int(x1): int(x2), :]
+    def read_license_plate(image: np.ndarray, license_plate_detection: list[float]) -> tuple:
+        x1, y1, x2, y2, score = license_plate_detection
+        license_plate_crop = image[int(y1):int(y2), int(x1): int(x2), :]
 
-            deskewed_license_plate = ImageProcessing.deskew(license_plate_crop)
-            license_plate_processed = ImageProcessing.process_image(deskewed_license_plate)
-            # ImageProcessing.show_image(license_plate_processed)
+        deskewed_license_plate = ImageProcessing.deskew(license_plate_crop)
+        license_plate_processed = ImageProcessing.process_image(deskewed_license_plate)
+        ImageProcessing.show_image(license_plate_processed)
 
-            license_plate_text = pytesseract.image_to_string(license_plate_processed, config=r'--oem 3 --psm 8')
+        license_plate_text = pytesseract.image_to_string(license_plate_processed, config=r'--oem 3 --psm 8')
 
-            print(license_plate_text, 'lp text')
-            text = PlateValidation.format_license_plate(license_plate_text.upper())
-            print(text, 'here')
+        print(license_plate_text, 'lp text')
+        text = PlateValidation.format_license_plate(license_plate_text.upper())
+        print(text, 'here')
 
-
-            if PlateValidation.license_complies_format(text):
-                license_plate_texts.append((text, score))
-            else:
-                print('WRONG NUMBERS -', text)
-
-        return license_plate_texts
-
+        if PlateValidation.license_complies_format(text):
+            return text, score
+        else:
+            raise Exception(f'Не вдалось розпізнати номера: {text}')

@@ -27,8 +27,11 @@ class PlateValidation:
     def format_license_plate(text: str) -> str:
         cleaned_text = re.sub(r'[^A-Z0-9]', '', text)
 
+        if len(cleaned_text) < 8:
+            return text.strip()
+
         if len(cleaned_text) > 8:
-            cleaned_text = cleaned_text[-8:]
+            cleaned_text = cleaned_text[1:9]
 
         license_plate = ''
         mapping = {0: dict_int_to_char, 1: dict_int_to_char, 2: dict_char_to_int, 3: dict_char_to_int,
@@ -47,14 +50,14 @@ class PlateValidation:
         if len(text) != 8:
             return False
 
-        if ((text[0] in string.ascii_uppercase or dict_int_to_char.keys()) and
-                (text[1] in string.ascii_uppercase or dict_int_to_char.keys()) and
-                (text[2] in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'] or dict_char_to_int.keys()) and
-                (text[3] in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'] or dict_char_to_int.keys()) and
-                (text[4] in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'] or dict_char_to_int.keys()) and
-                (text[5] in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'] or dict_char_to_int.keys()) and
-                (text[6] in string.ascii_uppercase or dict_int_to_char.keys()) and
-                (text[7] in string.ascii_uppercase or dict_int_to_char.keys())):
+        if ((text[0] in string.ascii_uppercase) and
+                (text[1] in string.ascii_uppercase) and
+                (text[2] in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']) and
+                (text[3] in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']) and
+                (text[4] in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']) and
+                (text[5] in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']) and
+                (text[6] in string.ascii_uppercase) and
+                (text[7] in string.ascii_uppercase)):
             return True
 
         return False

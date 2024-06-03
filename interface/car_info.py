@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic import BaseModel
 
 
@@ -24,7 +26,7 @@ class CarOperation(BaseModel):
 
 class CarInfoResponse(BaseModel):
     digits: str
-    vin: str
+    vin: Optional[str]
     vendor: str
     model: str
     model_year: int

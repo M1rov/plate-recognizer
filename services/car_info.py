@@ -8,11 +8,14 @@ class CarInfo:
     API_KEY = "e1c4f104e5fb2a9efabf1d5835e0d0f5"
 
     def get_car_info(self, license_plate: str) -> CarInfoResponse:
-        url = f"{self.API_URL}/nomer/{license_plate}"
-        print(license_plate)
-        car_info = requests.get(url, headers={
-            "Accept": "application/json",
-            "X-Api-Key": self.API_KEY
-        }).json()
-        print(car_info)
-        return CarInfoResponse(**car_info)
+        try:
+            url = f"{self.API_URL}/nomer/{license_plate}"
+            car_info = requests.get(url, headers={
+                "Accept": "application/json",
+                "X-Api-Key": self.API_KEY
+            }).json()
+            return CarInfoResponse(**car_info)
+        except Exception as e:
+            raise Exception(f'Не вдалось отримати інформацію з БД ДАІ по номеру {license_plate}')
+
+
