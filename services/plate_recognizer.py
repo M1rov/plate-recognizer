@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 from ultralytics import YOLO
 
@@ -41,7 +43,7 @@ class PlateRecognizer:
         if not len(plates):
             raise Exception('На цьому фото не видно номерних знаків, спробуйте завантажити інше!')
 
-        centered_plate = PlateRecognizer.get_centered_object(image, plates.boxes.data.tolist())
+        centered_plate = ImageProcessing.get_centered_object(image, plates.boxes.data.tolist())
 
         px1, py1, px2, py2, plate_score, plate_class_id = centered_plate
         # Adjust coordinates to the original image
@@ -53,41 +55,15 @@ class PlateRecognizer:
 
         return license_plate_detection
 
-    @staticmethod
-    def get_centered_object(image: np.ndarray, detections: list[list[float]]) -> list[float]:
-        """
-        Get the most centered object in the image.
-
-        :param image: The image as a numpy array.
-        :param detections: A list of detections, where each detection is a list [x_min, y_min, x_max, y_max, score, ...].
-        :return: The detection [x_min, y_min, x_max, y_max, score, ...] of the most centered object.
-        """
-        img_height, img_width = image.shape[:2]
-        center_x, center_y = img_width / 2, img_height / 2
-
-        min_distance = float('inf')
-        centered_object = None
-
-        for detection in detections:
-            x_min, y_min, x_max, y_max = detection[:4]
-            object_center_x = (x_min + x_max) / 2
-            object_center_y = (y_min + y_max) / 2
-
-            distance = np.sqrt((center_x - object_center_x) ** 2 + (center_y - object_center_y) ** 2)
-
-            if distance < min_distance:
-                min_distance = distance
-                centered_object = detection
-
-        return centered_object
-
     def get_car_info(self, image: np.ndarray):
+        start = time.perf_counter()
         vehicle_detections = self.detect_vehicles(image)
         if not len(vehicle_detections):
             raise Exception('На цьому фото не було знайдено автомобілів, спробуйте завантажити інше.')
-        centered_vehicle = self.get_centered_object(image, vehicle_detections)
+        centered_vehicle = ImageProcessing.get_centered_object(image, vehicle_detections)
         license_plate_detection = self.detect_license_plate(image, centered_vehicle)
         text = ImageProcessing.read_license_plate(image, license_plate_detection)
         car_info = CarInfo().get_car_info(text[0])
-
+        request_time = time.perf_counter() - start
+        print(f'Фотографія була оброблена за {request_time}')
         return car_info

@@ -8,7 +8,8 @@ dict_char_to_int = {
     'A': '4',
     'G': '6',
     'S': '5',
-    'B': '8'
+    'B': '8',
+    'Z': '2'
 }
 
 dict_int_to_char = {
@@ -18,14 +19,15 @@ dict_int_to_char = {
     '4': 'A',
     '6': 'G',
     '5': 'S',
-    '8': 'B'
+    '8': 'B',
+    '2': 'Z'
 }
 
 
 class PlateValidation:
     @staticmethod
     def format_license_plate(text: str) -> str:
-        cleaned_text = re.sub(r'[^A-Z0-9]', '', text)
+        cleaned_text = re.sub(r'[^A-Z0-9]', '', text).strip()
 
         if len(cleaned_text) < 8:
             return text.strip()

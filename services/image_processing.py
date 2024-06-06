@@ -1,39 +1,21 @@
 import math
 
 import cv2
+import easyocr as easyocr
 import numpy as np
-from matplotlib import pyplot as plt
-from pytesseract import pytesseract
 
 from services.plate_validation import PlateValidation
 
+reader = easyocr.Reader(['en'])
+
 
 class ImageProcessing:
-    @staticmethod
-    def show_image(image: np.ndarray):
-        # Display the image
-        plt.figure(figsize=(12, 8))
-        plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-        plt.axis('off')
-        plt.show()
-
     @staticmethod
     def process_image(image: np.ndarray):
         # Convert to grayscale
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-        # Apply Gaussian Blur to reduce noise and improve binarization
-        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-
-        # Binarize the image using adaptive thresholding
-        binary = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                       cv2.THRESH_BINARY_INV, 11, 2)
-
-        # Perform morphological operations to remove small noise and enhance text
-        kernel = np.ones((3, 3), np.uint8)
-        morphed = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel, iterations=1)
-
-        return morphed
+        return gray
 
     @staticmethod
     def rotate_image(image, angle):
@@ -77,15 +59,38 @@ class ImageProcessing:
         return ImageProcessing.rotate_image(src_img, ImageProcessing.compute_skew(src_img))
 
     @staticmethod
+    def get_centered_object(image: np.ndarray, detections: list[list[float]]) -> list[float]:
+        img_height, img_width = image.shape[:2]
+        center_x, center_y = img_width / 2, img_height / 2
+
+        min_distance = float('inf')
+        centered_object = None
+
+        for detection in detections:
+            x_min, y_min, x_max, y_max = detection[:4]
+            object_center_x = (x_min + x_max) / 2
+            object_center_y = (y_min + y_max) / 2
+
+            distance = np.sqrt((center_x - object_center_x) ** 2 + (center_y - object_center_y) ** 2)
+
+            if distance < min_distance:
+                min_distance = distance
+                centered_object = detection
+
+        return centered_object
+
+    @staticmethod
     def read_license_plate(image: np.ndarray, license_plate_detection: list[float]) -> tuple:
         x1, y1, x2, y2, score = license_plate_detection
         license_plate_crop = image[int(y1):int(y2), int(x1): int(x2), :]
 
         deskewed_license_plate = ImageProcessing.deskew(license_plate_crop)
         license_plate_processed = ImageProcessing.process_image(deskewed_license_plate)
-        ImageProcessing.show_image(license_plate_processed)
 
-        license_plate_text = pytesseract.image_to_string(license_plate_processed, config=r'--oem 3 --psm 8')
+        result = reader.readtext(license_plate_processed, detail=0)
+        if not len(result):
+            raise Exception('Не вдалось прочитати номерні знаки, спробуйте інше зображення!')
+        license_plate_text = result[0]
 
         print(license_plate_text, 'lp text')
         text = PlateValidation.format_license_plate(license_plate_text.upper())

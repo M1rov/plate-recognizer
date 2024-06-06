@@ -14,6 +14,9 @@ class CarInfo:
                 "Accept": "application/json",
                 "X-Api-Key": self.API_KEY
             }).json()
+            if 'error' in car_info:
+                raise Exception(f'Не вдалось отримати інформацію з БД ДАІ по номеру {license_plate}')
+
             return CarInfoResponse(**car_info)
         except Exception as e:
             raise Exception(f'Не вдалось отримати інформацію з БД ДАІ по номеру {license_plate}')
